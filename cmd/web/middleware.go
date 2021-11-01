@@ -6,6 +6,7 @@ import (
 	"net/http"
 )
 
+// WriteToConsole write to console when hit the page.
 func WriteToConsole(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		fmt.Println("Hit the page.")
