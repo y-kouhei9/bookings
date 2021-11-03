@@ -108,8 +108,8 @@
             notie.alert({
                 type: msgType,
                 text: msg,
-            });
-        };
+            })
+        }
 
         function notifyModal(title, text, icon, confirmButtonText) {
             Swal.fire({
@@ -118,7 +118,19 @@
                 icon: icon,
                 confirmButtonText: confirmButtonText
             })
-        };
+        }
+
+        {{with .Error}}
+        notify("{{.}}", "error")
+        {{end}}
+
+        {{with .Flash}}
+        notify("{{.}}", "success")
+        {{end}}
+
+        {{with .Warning}}
+        notify("{{.}}", "warning")
+        {{end}}
 
         function Prompt() {
             let toast = function(c) {
