@@ -1,8 +1,16 @@
 package handlers
 
 import (
+	"testing"
 	"encoding/gob"
 	"fmt"
+	"log"
+	"net/http"
+	"time"
+	"html/template"
+	"os"
+	"path/filepath"
+	
 	"github.com/alexedwards/scs/v2"
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
@@ -10,12 +18,6 @@ import (
 	"github.com/y-kouhei9/bookings/internal/config"
 	"github.com/y-kouhei9/bookings/internal/models"
 	"github.com/y-kouhei9/bookings/internal/render"
-	"log"
-	"net/http"
-	"time"
-	"html/template"
-	"os"
-	"path/filepath"
 )
 
 
@@ -24,7 +26,7 @@ var session *scs.SessionManager
 var pathToTemplates = "./../../templates"
 var functions = template.FuncMap{}
 
-func getRoutes() http.Handler {
+func TestMain(m *testing.M) {
 	// what am I going to put in the session.
 	gob.Register(models.Reservation{})
 
@@ -57,6 +59,11 @@ func getRoutes() http.Handler {
 	NewHandlers(repo)
 	render.NewTemplates(&app)
 
+	os.Exit(m.Run())
+
+}
+
+func getRoutes() http.Handler {
 	mux := chi.NewRouter()
 
 	mux.Use(middleware.Recoverer)
@@ -114,17 +121,18 @@ func CreateTestTemplateCache() (map[string]*template.Template, error) {
 
 	for _, page := range pages {
 		name := filepath.Base(page)
-		// fmt.Println("Page is currently", page)
 		ts, err := template.New(name).Funcs(functions).ParseFiles(page)
-
 		if err != nil {
 			return myCache, err
 		}
 
 		matches, err := filepath.Glob(fmt.Sprintf("%s/*.layout.tmpl", pathToTemplates))
+		if err != nil {
+			return myCache, err
+		}
 
 		if len(matches) > 0 {
-			_, err := ts.ParseGlob(fmt.Sprintf("%s/*.layout.tmpl", pathToTemplates))
+			ts, err = ts.ParseGlob(fmt.Sprintf("%s/*.layout.tmpl", pathToTemplates))
 			if err != nil {
 				return myCache, err
 			}

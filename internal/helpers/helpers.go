@@ -1,8 +1,8 @@
 package helpers
 
 import (
-	"runtime/debug"
 	"fmt"
+	"runtime/debug"
 	"net/http"
 
 	"github.com/y-kouhei9/bookings/internal/config"
@@ -15,7 +15,7 @@ func NewHelpers(a *config.AppConfig) {
 	app = a
 }
 
-// ClientError 
+// ClientError
 func ClientError(w http.ResponseWriter, status int) {
 	app.InfoLog.Println("Client error with status of", status)
 	http.Error(w, http.StatusText(status), status)

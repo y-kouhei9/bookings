@@ -1,11 +1,11 @@
 package forms
 
 import (
-	"github.com/asaskevich/govalidator"
 	"fmt"
-	"strings"
 	"net/url"
-	// "net/http"
+	"strings"
+
+	"github.com/asaskevich/govalidator"
 )
 
 // Form creates a custom form struct, embeds a url.Values object.
@@ -32,7 +32,7 @@ func (f *Form) Required(fields ...string) {
 	for _, field := range fields {
 		value := f.Get(field)
 		if strings.TrimSpace(value) == "" {
-			f.Errors.Add(field, "This field connot be blank.")
+			f.Errors.Add(field, "This field cannot be blank.")
 		}
 	}
 }
@@ -41,7 +41,6 @@ func (f *Form) Required(fields ...string) {
 func (f *Form) Has(field string) bool {
 	x := f.Get(field)
 	if x == "" {
-		f.Errors.Add(field, "This field cannot be blank.")
 		return false
 	}
 	return true

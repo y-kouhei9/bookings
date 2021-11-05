@@ -13,7 +13,7 @@ func TestForm_Valid(t *testing.T) {
 
 	isValid := form.Valid()
 	if !isValid {
-		t.Error("got incalid when should have been valid.")
+		t.Error("got invalid when should have been valid.")
 	}
 }
 
@@ -23,7 +23,7 @@ func TestForm_Required(t *testing.T) {
 
 	form.Required("a", "b", "c")
 	if form.Valid() {
-		t.Error("form shows calid when required fields missing.")
+		t.Error("form shows valid when required fields missing.")
 	}
 
 	postedData := url.Values{}
