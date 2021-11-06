@@ -1,36 +1,33 @@
 package handlers
 
 import (
-	"testing"
 	"encoding/gob"
 	"fmt"
-	"log"
-	"net/http"
-	"time"
-	"html/template"
-	"os"
-	"path/filepath"
-	
 	"github.com/alexedwards/scs/v2"
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
 	"github.com/justinas/nosurf"
-	"github.com/y-kouhei9/bookings/internal/config"
-	"github.com/y-kouhei9/bookings/internal/models"
-	"github.com/y-kouhei9/bookings/internal/render"
+	"github.com/tsawler/bookings-app/internal/config"
+	"github.com/tsawler/bookings-app/internal/models"
+	"github.com/tsawler/bookings-app/internal/render"
+	"html/template"
+	"log"
+	"net/http"
+	"os"
+	"path/filepath"
+	"time"
 )
-
 
 var app config.AppConfig
 var session *scs.SessionManager
 var pathToTemplates = "./../../templates"
 var functions = template.FuncMap{}
 
-func TestMain(m *testing.M) {
-	// what am I going to put in the session.
+func getRoutes() http.Handler {
+	// what am I going to put in the session
 	gob.Register(models.Reservation{})
 
-	// chage this to true when in production.
+	// change this to true when in production
 	app.InProduction = false
 
 	infoLog := log.New(os.Stdout, "INFO\t", log.Ldate|log.Ltime)
@@ -39,6 +36,7 @@ func TestMain(m *testing.M) {
 	errorLog := log.New(os.Stdout, "ERROR\t", log.Ldate|log.Ltime|log.Lshortfile)
 	app.ErrorLog = errorLog
 
+	// set up the session
 	session = scs.New()
 	session.Lifetime = 24 * time.Hour
 	session.Cookie.Persist = true
@@ -57,17 +55,13 @@ func TestMain(m *testing.M) {
 
 	repo := NewRepo(&app)
 	NewHandlers(repo)
+
 	render.NewTemplates(&app)
 
-	os.Exit(m.Run())
-
-}
-
-func getRoutes() http.Handler {
 	mux := chi.NewRouter()
 
 	mux.Use(middleware.Recoverer)
-	// mux.Use(NoSurf)
+	//mux.Use(NoSurf)
 	mux.Use(SessionLoad)
 
 	mux.Get("/", Repo.Home)
@@ -91,25 +85,25 @@ func getRoutes() http.Handler {
 	return mux
 }
 
-// NoSurf adds CSRF protection to all POST request.
+// NoSurf is the csrf protection middleware
 func NoSurf(next http.Handler) http.Handler {
 	csrfHandler := nosurf.New(next)
 
 	csrfHandler.SetBaseCookie(http.Cookie{
 		HttpOnly: true,
-		Path: "/",
-		Secure: app.InProduction,
+		Path:     "/",
+		Secure:   app.InProduction,
 		SameSite: http.SameSiteLaxMode,
 	})
 	return csrfHandler
 }
 
-// SessionLoad loads and saves the session on every request.
+// SessionLoad loads and saves session data for current request
 func SessionLoad(next http.Handler) http.Handler {
 	return session.LoadAndSave(next)
 }
 
-// CreateTestTemplateCache creates a template cache as a map.
+// CreateTestTemplateCache creates a template cache as a map
 func CreateTestTemplateCache() (map[string]*template.Template, error) {
 
 	myCache := map[string]*template.Template{}
@@ -139,7 +133,6 @@ func CreateTestTemplateCache() (map[string]*template.Template, error) {
 		}
 
 		myCache[name] = ts
-
 	}
 
 	return myCache, nil

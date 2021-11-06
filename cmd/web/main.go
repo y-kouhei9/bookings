@@ -3,19 +3,16 @@ package main
 import (
 	"encoding/gob"
 	"fmt"
+	"github.com/alexedwards/scs/v2"
+	"github.com/tsawler/bookings-app/internal/config"
+	"github.com/tsawler/bookings-app/internal/handlers"
+	"github.com/tsawler/bookings-app/internal/helpers"
+	"github.com/tsawler/bookings-app/internal/models"
+	"github.com/tsawler/bookings-app/internal/render"
 	"log"
 	"net/http"
 	"os"
 	"time"
-
-	"github.com/y-kouhei9/bookings/internal/helpers"
-
-	"github.com/y-kouhei9/bookings/internal/config"
-	"github.com/y-kouhei9/bookings/internal/handlers"
-	"github.com/y-kouhei9/bookings/internal/models"
-	"github.com/y-kouhei9/bookings/internal/render"
-
-	"github.com/alexedwards/scs/v2"
 )
 
 const portNumber = ":8080"
@@ -25,14 +22,14 @@ var session *scs.SessionManager
 var infoLog *log.Logger
 var errorLog *log.Logger
 
-// main is the main application function.
+// main is the main function
 func main() {
 	err := run()
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	fmt.Println(fmt.Sprintf("Starting application on port %s", portNumber))
+	fmt.Println(fmt.Sprintf("Staring application on port %s", portNumber))
 
 	srv := &http.Server{
 		Addr:    portNumber,
@@ -40,14 +37,16 @@ func main() {
 	}
 
 	err = srv.ListenAndServe()
-	log.Fatal(err)
+	if err != nil {
+		log.Fatal(err)
+	}
 }
 
 func run() error {
-	// what am I going to put in the session.
+	// what am I going to put in the session
 	gob.Register(models.Reservation{})
 
-	// change this to true when in production.
+	// change this to true when in production
 	app.InProduction = false
 
 	infoLog = log.New(os.Stdout, "INFO\t", log.Ldate|log.Ltime)
@@ -56,6 +55,7 @@ func run() error {
 	errorLog = log.New(os.Stdout, "ERROR\t", log.Ldate|log.Ltime|log.Lshortfile)
 	app.ErrorLog = errorLog
 
+	// set up the session
 	session = scs.New()
 	session.Lifetime = 24 * time.Hour
 	session.Cookie.Persist = true
@@ -66,11 +66,12 @@ func run() error {
 
 	tc, err := render.CreateTemplateCache()
 	if err != nil {
-		log.Fatal("Cannot create template cache")
+		log.Fatal("cannot create template cache")
 		return err
 	}
 
 	app.TemplateCache = tc
+	app.UseCache = false
 
 	repo := handlers.NewRepo(&app)
 	handlers.NewHandlers(repo)
