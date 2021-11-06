@@ -24,7 +24,7 @@ func TestMain(m *testing.M) {
 	// chage this to true when in production.
 	testApp.InProduction = false
 
-	infoLog := log.New(os.Stdout, "INSO\t", log.Ldate|log.Ltime)
+	infoLog := log.New(os.Stdout, "INFO\t", log.Ldate|log.Ltime)
 	testApp.InfoLog = infoLog
 
 	errorLog := log.New(os.Stdout, "ERROR\t", log.Ldate|log.Ltime|log.Lshortfile)

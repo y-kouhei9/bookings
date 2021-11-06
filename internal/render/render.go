@@ -98,7 +98,6 @@ func CreateTemplateCache() (map[string]*template.Template, error) {
 		}
 
 		myCache[name] = ts
-
 	}
 
 	return myCache, nil
