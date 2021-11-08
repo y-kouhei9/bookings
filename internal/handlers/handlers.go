@@ -1,13 +1,16 @@
 package handlers
 
 import (
+	"github.com/y-kouhei9/bookings-app/internal/driver"
+	"github.com/y-kouhei9/bookings-app/internal/repository/dbrepo"
+	"github.com/y-kouhei9/bookings-app/internal/repository"
 	"encoding/json"
 	"fmt"
-	"github.com/tsawler/bookings-app/internal/config"
-	"github.com/tsawler/bookings-app/internal/forms"
-	"github.com/tsawler/bookings-app/internal/helpers"
-	"github.com/tsawler/bookings-app/internal/models"
-	"github.com/tsawler/bookings-app/internal/render"
+	"github.com/y-kouhei9/bookings-app/internal/config"
+	"github.com/y-kouhei9/bookings-app/internal/forms"
+	"github.com/y-kouhei9/bookings-app/internal/helpers"
+	"github.com/y-kouhei9/bookings-app/internal/models"
+	"github.com/y-kouhei9/bookings-app/internal/render"
 	"net/http"
 )
 
@@ -17,12 +20,14 @@ var Repo *Repository
 // Repository is the repository type
 type Repository struct {
 	App *config.AppConfig
+	DB repository.DatabaseRepo
 }
 
 // NewRepo creates a new repository
-func NewRepo(a *config.AppConfig) *Repository {
+func NewRepo(a *config.AppConfig, db *driver.DB) *Repository {
 	return &Repository{
 		App: a,
+		DB: dbrepo.NewPostgresRepo(db.SQL, a),
 	}
 }
 
