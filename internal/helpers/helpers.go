@@ -2,7 +2,7 @@ package helpers
 
 import (
 	"fmt"
-	"github.com/tsawler/bookings-app/internal/config"
+	"github.com/y-kouhei9/bookings-app/internal/config"
 	"net/http"
 	"runtime/debug"
 )
