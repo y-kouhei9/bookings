@@ -112,6 +112,7 @@ func (m *Repository) PostReservation(w http.ResponseWriter, r *http.Request) {
 
 	// debug comment
 	fmt.Println("------------------------------------")
+	fmt.Println("[Debug Message] (/internal/handlers/handers.go)")
 	fmt.Println("FirstName is", reservation.FirstName)
 	fmt.Println("LastName is", reservation.LastName)
 	fmt.Println("Email is", reservation.Email)
