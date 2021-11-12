@@ -1,20 +1,22 @@
 package handlers
 
 import (
+	"strings"
+	"encoding/json"
 	"fmt"
 	"log"
+	"net/http"
 	"strconv"
 	"time"
-	"github.com/y-kouhei9/bookings-app/internal/driver"
-	"github.com/y-kouhei9/bookings-app/internal/repository/dbrepo"
-	"github.com/y-kouhei9/bookings-app/internal/repository"
-	"encoding/json"
+
 	"github.com/y-kouhei9/bookings-app/internal/config"
+	"github.com/y-kouhei9/bookings-app/internal/driver"
 	"github.com/y-kouhei9/bookings-app/internal/forms"
 	"github.com/y-kouhei9/bookings-app/internal/helpers"
 	"github.com/y-kouhei9/bookings-app/internal/models"
 	"github.com/y-kouhei9/bookings-app/internal/render"
-	"net/http"
+	"github.com/y-kouhei9/bookings-app/internal/repository"
+	"github.com/y-kouhei9/bookings-app/internal/repository/dbrepo"
 
 	"github.com/go-chi/chi"
 )
@@ -25,14 +27,14 @@ var Repo *Repository
 // Repository is the repository type
 type Repository struct {
 	App *config.AppConfig
-	DB repository.DatabaseRepo
+	DB  repository.DatabaseRepo
 }
 
 // NewRepo creates a new repository
 func NewRepo(a *config.AppConfig, db *driver.DB) *Repository {
 	return &Repository{
 		App: a,
-		DB: dbrepo.NewPostgresRepo(db.SQL, a),
+		DB:  dbrepo.NewPostgresRepo(db.SQL, a),
 	}
 }
 
@@ -40,7 +42,7 @@ func NewRepo(a *config.AppConfig, db *driver.DB) *Repository {
 func NewTestRepo(a *config.AppConfig) *Repository {
 	return &Repository{
 		App: a,
-		DB: dbrepo.NewTestingRepo(a),
+		DB:  dbrepo.NewTestingRepo(a),
 	}
 }
 
@@ -92,8 +94,8 @@ func (m *Repository) Reservation(w http.ResponseWriter, r *http.Request) {
 	data["reservation"] = res
 
 	render.Template(w, r, "make-reservation.page.tmpl", &models.TemplateData{
-		Form: forms.New(nil),
-		Data: data,
+		Form:      forms.New(nil),
+		Data:      data,
 		StringMap: stringMap,
 	})
 }
@@ -171,9 +173,9 @@ func (m *Repository) PostReservation(w http.ResponseWriter, r *http.Request) {
 	}
 
 	restriction := models.RoomRestriction{
-		StartDate: 	   reservation.StartDate,
-		EndData:	   reservation.EndDate,
-		RoomID: 	   reservation.RoomID,
+		StartDate:     reservation.StartDate,
+		EndData:       reservation.EndDate,
+		RoomID:        reservation.RoomID,
 		ReservationID: newReservationID,
 		RestrictionID: 1,
 	}
@@ -196,7 +198,7 @@ func (m *Repository) PostReservation(w http.ResponseWriter, r *http.Request) {
 	`, reservation.FirstName, reservation.StartDate.Format(layout), reservation.EndDate.Format(layout))
 
 	msg := models.MailData{
-		To:		  reservation.Email,
+		To:       reservation.Email,
 		From:     "me@here.com",
 		Subject:  "Reservation Confirmation",
 		Content:  htmlMessage,
@@ -294,7 +296,7 @@ func (m *Repository) AvailabilityJSON(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		// can't parse form, so return appropriate json
 		resp := jsonResponse{
-			OK: 	 false,
+			OK:      false,
 			Message: "Internal server error",
 		}
 
@@ -310,14 +312,14 @@ func (m *Repository) AvailabilityJSON(w http.ResponseWriter, r *http.Request) {
 	layout := "2006-01-02"
 	startDate, _ := time.Parse(layout, sd)
 	endDate, _ := time.Parse(layout, ed)
-	
+
 	roomID, _ := strconv.Atoi(r.Form.Get("room_id"))
 
 	available, err := m.DB.SearchAvailabilityByDatesByRoomID(startDate, endDate, roomID)
 	if err != nil {
 		// can't parse form, so return appropriate json
 		resp := jsonResponse{
-			OK: 	 false,
+			OK:      false,
 			Message: "Error connecting to database",
 		}
 
@@ -375,7 +377,7 @@ func (m *Repository) ReservationSummary(w http.ResponseWriter, r *http.Request) 
 	stringMap["end_date"] = ed
 
 	render.Template(w, r, "reservation-summary.page.tmpl", &models.TemplateData{
-		Data: data,
+		Data:      data,
 		StringMap: stringMap,
 	})
 }
@@ -427,4 +429,126 @@ func (m *Repository) BookRoom(w http.ResponseWriter, r *http.Request) {
 	m.App.Session.Put(r.Context(), "reservation", res)
 
 	http.Redirect(w, r, "/make-reservation", http.StatusSeeOther)
+}
+
+// ShowLogin shos the login screen
+func (m *Repository) ShowLogin(w http.ResponseWriter, r *http.Request) {
+	render.Template(w, r, "login.page.tmpl", &models.TemplateData{
+		Form: forms.New(nil),
+	})
+}
+
+// PostShowLogin handles logging the user in
+func (m *Repository) PostShowLogin(w http.ResponseWriter, r *http.Request) {
+	_ = m.App.Session.RenewToken(r.Context())
+
+	err := r.ParseForm()
+	if err != nil {
+		log.Println(err)
+	}
+
+	email := r.Form.Get("email")
+	password := r.Form.Get("password")
+
+	form := forms.New(r.PostForm)
+	form.Required("email", "password")
+	form.IsEmail("email")
+	if !form.Valid() {
+		render.Template(w, r, "login.page.tmpl", &models.TemplateData{
+			Form: form,
+		})
+	}
+
+	id, _, err := m.DB.Authenticate(email, password)
+	if err != nil {
+		log.Println(err)
+
+		m.App.Session.Put(r.Context(), "error", "Invalid login credentials")
+		http.Redirect(w, r, "/user/login", http.StatusSeeOther)
+		return
+	}
+
+	m.App.Session.Put(r.Context(), "user_id", id)
+	m.App.Session.Put(r.Context(), "flash", "Logged in successfully")
+	http.Redirect(w, r, "/", http.StatusSeeOther)
+}
+
+// Logout logs a user out
+func (m *Repository) Logout(w http.ResponseWriter, r *http.Request) {
+	_ = m.App.Session.Destroy(r.Context())
+	_ = m.App.Session.RenewToken(r.Context())
+
+	http.Redirect(w, r, "/user/login", http.StatusSeeOther)
+}
+
+// AdminDashboard displays admindashboard for admin
+func (m *Repository) AdminDashboard(w http.ResponseWriter, r *http.Request) {
+	render.Template(w, r, "admin-dashboard.page.tmpl", &models.TemplateData{})
+}
+
+// AdminAllReservations shows all reservations in admin tool
+func (m *Repository) AdminAllReservations(w http.ResponseWriter, r *http.Request) {
+	reservations, err := m.DB.AllReservations()
+	if err != nil {
+		helpers.ServerError(w, err)
+		return
+	}
+
+	data := make(map[string]interface{})
+	data["reservations"] = reservations
+
+	render.Template(w, r, "admin-all-reservations.page.tmpl", &models.TemplateData{
+		Data: data,
+	})
+}
+
+// AdminNewReservations shows all new reservations in admin tool
+func (m *Repository) AdminNewReservations(w http.ResponseWriter, r *http.Request) {
+	reservations, err := m.DB.AllNewReservations()
+	if err != nil {
+		helpers.ServerError(w, err)
+		return
+	}
+
+	data := make(map[string]interface{})
+	data["reservations"] = reservations
+	render.Template(w, r, "admin-new-reservations.page.tmpl", &models.TemplateData{
+		Data: data,
+	})
+}
+
+// AdminShowReservation shows the reservation in the admin tool
+func (m *Repository) AdminShowReservation(w http.ResponseWriter, r *http.Request) {
+	exploded := strings.Split(r.RequestURI, "/")
+	id, err := strconv.Atoi(exploded[4])
+	if err != nil {
+		helpers.ServerError(w, err)
+		return
+	}
+
+	src := exploded[3]
+
+	stringMap := make(map[string]string)
+	stringMap["src"] = src
+
+	// get reservation form the database
+	res, err := m.DB.GetReservationByID(id)
+	if err != nil {
+		helpers.ServerError(w, err)
+		return
+	}
+
+	data := make(map[string]interface{})
+	data["reservation"] = res
+
+	render.Template(w, r, "admin-reservations-show.page.tmpl", &models.TemplateData{
+		StringMap: stringMap,
+		Data: data,
+		Form: forms.New(nil),
+	})
+}
+
+// AdminReservationsCalendar displays the reservation calendar
+func (m *Repository) AdminReservationsCalendar(w http.ResponseWriter, r *http.Request) {
+	render.Template(w, r, "admin-reservations-calendar.page.tmpl", &models.TemplateData{})
 }
