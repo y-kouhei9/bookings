@@ -1,16 +1,16 @@
 package main
 
 import (
-	"github.com/y-kouhei9/bookings-app/internal/driver"
 	"encoding/gob"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
 	"time"
-
+	
 	"github.com/alexedwards/scs/v2"
 	"github.com/y-kouhei9/bookings-app/internal/config"
+	"github.com/y-kouhei9/bookings-app/internal/driver"
 	"github.com/y-kouhei9/bookings-app/internal/handlers"
 	"github.com/y-kouhei9/bookings-app/internal/helpers"
 	"github.com/y-kouhei9/bookings-app/internal/models"
@@ -32,6 +32,11 @@ func main() {
 	}
 	defer db.SQL.Close()
 
+	defer close(app.MailChan)
+
+	fmt.Println("Starting mail listener...")
+	listenForMail()
+
 	fmt.Println(fmt.Sprintf("Staring application on port %s", portNumber))
 
 	srv := &http.Server{
@@ -51,6 +56,9 @@ func run() (*driver.DB, error) {
 	gob.Register(models.User{})
 	gob.Register(models.Room{})
 	gob.Register(models.Restriction{})
+
+	mailChan := make(chan models.MailData)
+	app.MailChan = mailChan
 
 	// change this to true when in production
 	app.InProduction = false
